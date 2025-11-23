@@ -59,6 +59,22 @@
 
 
 ;; -------------------------------
+;; POST /todos/:id/toggle  (NOVO)
+;; -------------------------------
+(defn toggle-todo
+  "Chama a API para alternar o status de um todo."
+  [id]
+  (go
+    (try
+      (<p! (fetch-json (str api-url "/todos/" id "/toggle")
+                       {:method "POST"}))
+      ;; Atualiza a lista inteira
+      (get-todos)
+      (catch js/Error e
+        (swap! app-state assoc :error (.-message e) :loading false)))))
+
+
+;; -------------------------------
 ;; Formulário
 ;; -------------------------------
 (defn todo-form []
@@ -77,14 +93,24 @@
 
 
 ;; -------------------------------
-;; Lista de todos  (CORRIGIDA)
+;; Lista de todos  (ATUALIZADA)
 ;; -------------------------------
 (defn todo-list []
   [:ul.todo-list
    (for [todo (:todos @app-state)]
-     ^{:key (:todos/id todo)}       ;; <-- CORRIGIDO
+     ^{:key (:todos/id todo)}
+
      [:li.todo-item
-      (:todos/title todo)])])       ;; <-- CORRIGIDO
+      {:class (when (= 1 (:todos/completed todo)) "completed")}
+
+      ;; checkbox de completar
+      [:input.todo-checkbox
+       {:type "checkbox"
+        :checked (not= 0 (:todos/completed todo))   ;; CORREÇÃO IMPORTANTE
+        :on-change #(toggle-todo (:todos/id todo))}]
+
+      ;; título
+      (:todos/title todo)])])
 
 
 ;; -------------------------------

@@ -34,3 +34,10 @@
          :body new-todo})
       {:status 400
        :body {:error "O campo 'title' é obrigatório."}})))
+(defn toggle-todo-handler
+  "Handler para 'alternar' o status de um todo."
+  [request]
+  (let [id (-> request :path-params :id Integer/parseInt)]
+    (if-let [updated-todo (db/toggle-todo! id)]
+      {:status 200 :body updated-todo}
+      {:status 404 :body {:error "Todo não encontrado"}})))
