@@ -6,7 +6,8 @@
     [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
     [ring.middleware.keyword-params :refer [wrap-keyword-params]]
     [ring.middleware.cors :refer [wrap-cors]]
-    [todo.backend.handler :as handler])
+    [todo.backend.handler :as handler]
+    [todo.backend.db :as db])
   (:gen-class))
 
 ;; ------------------------------
@@ -50,4 +51,5 @@
 
 (defn -main [& args]
   (let [port (Integer/parseInt (or (first args) "3000"))]
+    (db/initialize-database!) ;; Garante que a tabela exista
     (start-server port)))

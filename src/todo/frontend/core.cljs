@@ -41,6 +41,7 @@
       (catch js/Error e
         (swap! app-state assoc :error (.-message e) :loading false)))))
 
+
 ;; -------------------------------
 ;; POST /todos
 ;; -------------------------------
@@ -55,6 +56,7 @@
       (get-todos)
       (catch js/Error e
         (swap! app-state assoc :error (.-message e) :loading false)))))
+
 
 ;; -------------------------------
 ;; Formulário
@@ -73,14 +75,17 @@
                  (swap! app-state assoc :input-text ""))}
     "Adicionar"]])
 
+
 ;; -------------------------------
-;; Lista de todos
+;; Lista de todos  (CORRIGIDA)
 ;; -------------------------------
 (defn todo-list []
   [:ul.todo-list
    (for [todo (:todos @app-state)]
-     ^{:key (:id todo)}
-     [:li.todo-item (:title todo)])])
+     ^{:key (:todos/id todo)}       ;; <-- CORRIGIDO
+     [:li.todo-item
+      (:todos/title todo)])])       ;; <-- CORRIGIDO
+
 
 ;; -------------------------------
 ;; App principal
@@ -90,6 +95,7 @@
    [:h1 "Todo App (API Integrada)"]
    [todo-form]
    [todo-list]])
+
 
 ;; -------------------------------
 ;; Inicialização

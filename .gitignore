@@ -33,4 +33,10 @@ Thumbs.db
 #*#
 
 # Calva (VS Code Clojure)
-.calva/
+.calva/ 
+# ... (outras regras)
+
+# --- Banco de Dados ---
+*.db
+*.sqlite
+*.sqlite3
