@@ -2,30 +2,63 @@
   (:require
     [reagent.core :as r]
     [reagent.dom.client :as rdom]
-    [clojure.string :as str]))
+    [clojure.string :as str]
+    [cljs.core.async :refer [go]]
+    [cljs.core.async.interop :refer-macros [<p!]]))
 
 ;; --- 1. Estado Global Reativo ---
 (defonce app-state
   (r/atom {:next-id 1
            :input-text ""
-           :todos []}))
+           :todos []
+           :loading false
+           :error nil}))
 
-;; --- 2. Lógica ---
-(defn adicionar-todo-local []
-  (swap! app-state
-         (fn [estado-atual]
-           (let [novo-titulo (:input-text estado-atual)
-                 novo-id (:next-id estado-atual)]
-             (if (str/blank? novo-titulo)
-               estado-atual
-               {:next-id (inc novo-id)
-                :input-text ""
-                :todos (conj (:todos estado-atual)
-                             {:id novo-id
-                              :title novo-titulo})})))))
+(def api-url "http://localhost:3000/api")
 
+;; -------------------------------
+;; Helpers para fetch
+;; -------------------------------
+(defn fetch-json [url options]
+  (-> (js/fetch url (clj->js options))
+      (.then (fn [response]
+               (when-not (.-ok response)
+                 (throw (js/Error. (str "HTTP error: " (.-status response)))))
+               (.json response)))
+      (.then #(js->clj % :keywordize-keys true))))
 
-;; --- 3. Formulário Conectado ao Estado ---
+;; -------------------------------
+;; GET /todos
+;; -------------------------------
+(defn get-todos []
+  (swap! app-state assoc :loading true :error nil)
+  (go
+    (try
+      (let [response (<p! (fetch-json (str api-url "/todos") {:method "GET"}))]
+        (swap! app-state assoc
+               :todos (:todos response)
+               :loading false))
+      (catch js/Error e
+        (swap! app-state assoc :error (.-message e) :loading false)))))
+
+;; -------------------------------
+;; POST /todos
+;; -------------------------------
+(defn create-todo [todo-data]
+  (swap! app-state assoc :loading true :error nil)
+  (go
+    (try
+      (<p! (fetch-json (str api-url "/todos")
+                       {:method "POST"
+                        :headers {"Content-Type" "application/json"}
+                        :body (js/JSON.stringify (clj->js todo-data))}))
+      (get-todos)
+      (catch js/Error e
+        (swap! app-state assoc :error (.-message e) :loading false)))))
+
+;; -------------------------------
+;; Formulário
+;; -------------------------------
 (defn todo-form []
   [:div.todo-input
    [:input
@@ -35,31 +68,34 @@
      :on-change #(swap! app-state assoc :input-text (-> % .-target .-value))}]
 
    [:button
-    {:on-click adicionar-todo-local}
-    "Adicionar (Local)"]])
+    {:on-click (fn []
+                 (create-todo {:title (:input-text @app-state)})
+                 (swap! app-state assoc :input-text ""))}
+    "Adicionar"]])
 
-
-;; --- 4. Lista lendo direto do Estado ---
+;; -------------------------------
+;; Lista de todos
+;; -------------------------------
 (defn todo-list []
   [:ul.todo-list
    (for [todo (:todos @app-state)]
      ^{:key (:id todo)}
-     [:li.todo-item
-      (:title todo)])])
+     [:li.todo-item (:title todo)])])
 
-
-;; --- 5. App principal sem dados falsos ---
+;; -------------------------------
+;; App principal
+;; -------------------------------
 (defn app []
   [:div.todo-app
-   [:h1 "Todo App (Somente Frontend)"]
-   [:p "Isto é 100% local. Recarregue (F5) para ver os dados sumirem."]
-
+   [:h1 "Todo App (API Integrada)"]
    [todo-form]
    [todo-list]])
 
-
-;; Inicialização React 18
+;; -------------------------------
+;; Inicialização
+;; -------------------------------
 (defn ^:export init []
   (println "Frontend inicializado...")
   (let [root (rdom/create-root (js/document.getElementById "app"))]
-    (.render root (r/as-element [app]))))
+    (.render root (r/as-element [app])))
+  (get-todos))
