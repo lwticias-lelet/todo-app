@@ -1,16 +1,36 @@
 (ns todo.backend.handler
-  "Este namespace define nossas 'funções de resposta' (Handlers).")
+  "Handlers das rotas da API"
+  (:require
+    [todo.backend.db :as db]
+    [clojure.string :as str]))
 
+;; ------------------------------
+;; HELLO HANDLER
+;; ------------------------------
 (defn hello-handler
-  "Nosso primeiro handler. Ele apenas diz 'Olá, Mundo!'"
-  
-  [_request] ;; 1. O handler recebe a 'request' como argumento.
-             ;;    Usamos '_' para sinalizar que, nesta função,
-             ;;    vamos ignorar esse argumento.
-  
-  ;; 2. O handler retorna um mapa de 'response'.
-  {:status 200 ;; :status 200 é o código HTTP para "OK"
-   
-   :body "Hello, World!" ;; :body é o conteúdo que será enviado
-                         ;; de volta para o navegador.
-  })
+  [_request]
+  {:status 200
+   :body "Hello, World!"})
+
+;; ------------------------------
+;; LISTAR TODOS
+;; ------------------------------
+(defn list-todos-handler
+  "Handler para GET /api/todos."
+  [_request]
+  {:status 200
+   :body {:todos (db/get-all-todos)}})
+
+;; ------------------------------
+;; CRIAR TODO
+;; ------------------------------
+(defn create-todo-handler
+  "Handler para POST /api/todos."
+  [{:keys [body]}]
+  (let [title (:title body)]
+    (if (and title (not (str/blank? title)))
+      (let [new-todo (db/create-todo body)]
+        {:status 201
+         :body new-todo})
+      {:status 400
+       :body {:error "O campo 'title' é obrigatório."}})))
